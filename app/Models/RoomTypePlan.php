@@ -9,7 +9,7 @@ class RoomTypePlan extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['room_type_id', 'plan_type', 'price'];
+    protected $fillable = ['room_type_id', 'plan_type', 'price', 'currency'];
 
     public function roomtype()
     {

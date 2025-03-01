@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('property_guest_house_id')->constrained('property_guest_house_types')->onDelete('cascade');
             $table->string('variant'); // 'per_night', 'per_week', 'per_month', etc.
             $table->decimal('price', 10, 2); // The price value
+            $table->enum('currency', ['bif', 'dollar']);
             $table->timestamps();
         });
     }

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('room_type_id')->constrained()->cascadeOnDelete();
             $table->string('plan_type');
             $table->decimal('price', 10, 2);
+            $table->enum('currency', ['bif', 'dollar']);
             $table->timestamps();
         });
     }

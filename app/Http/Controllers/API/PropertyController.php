@@ -102,6 +102,7 @@ class PropertyController extends BaseController
             'guest_house_variants' => 'required_if:property_type,guesthouse|array',
             'guest_house_variants.*.variant' => 'required|string',
             'guest_house_variants.*.price' => 'required|numeric|min:1',
+            'guest_house_variants.*.currency' => 'required|in:bif,dollar'
         ]);
 
         if ($validator->fails()) {
@@ -284,6 +285,7 @@ class PropertyController extends BaseController
             'guest_house_variants' => 'required_if:property_type,guesthouse|array',
             'guest_house_variants.*.variant' => 'required|string',
             'guest_house_variants.*.price' => 'required|numeric|min:1',
+            'guest_house_variants.*.currency' => 'required|in:bif,dollar'
         ]);
 
         if ($validator->fails()) {
@@ -438,6 +440,54 @@ class PropertyController extends BaseController
         $hotel->delete();
 
         return $this->sendResponse([], 'Property deleted successfully.');
+    }
+
+    public function index()
+    {
+        // Eager load the necessary relationships
+        $properties = Property::with([
+            'images', // Eager load images
+            'hotelType',
+            'roomtypes',
+            'guestHouseType',
+            'hotelType.hotelType'  // Added for the correct relationship with HotelType
+        ])->get();
+
+        // Map through the properties to calculate the minimum price for each
+        $propertiesData = $properties->map(function ($property) {
+            // Check the property type and calculate the minimum price
+            $minPrice = null;
+
+            // Fetch the correct hotel type
+            $hotelTypeName = null;
+            if ($property->hotelType) {
+                $hotelTypeName = $property->hotelType->hotelType->type_name;
+            }
+
+            if ($property->property_type == 'hotel') {
+                // For hotel, we find the minimum price from the related RoomTypePlan
+                foreach ($property->roomtypes as $roomType) {
+                    $minRoomPrice = $roomType->plans()->min('price');
+                    if ($minPrice === null || ($minRoomPrice < $minPrice)) {
+                        $minPrice = $minRoomPrice;
+                    }
+                }
+            } elseif ($property->property_type == 'guest_house') {
+                // For guest house, we find the minimum price from the related GuestHouseVariant
+                $minPrice = $property->guestHouseType->guestHouseVariants()->min('price');
+            }
+
+            return [
+                'name'         => $property->name,
+                'property_type'=> $property->property_type,
+                'hotel_type'   => $hotelTypeName, // Corrected here
+                'address'      => $property->address,
+                'min_price'    => $minPrice,
+                'images'       => $property->images->pluck('image_url'), // Fixed here to 'image_url'
+            ];
+        });
+
+        return response()->json($propertiesData);
     }
 }
 

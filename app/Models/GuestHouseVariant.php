@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class GuestHouseVariant extends Model
 {
-    protected $fillable = ['property_guest_house_id', 'variant', 'price'];
+    protected $fillable = ['property_guest_house_id', 'variant', 'price', 'currency'];
 
     public function propertyGuestHouseType()
     {

@@ -79,7 +79,8 @@ class RoomTypeController extends BaseController
 
             'plans' => 'required_if:property_type,hotel|array',
             'plans.*.plan_type' => 'required|string|max:255',
-            'plans.*.price' => 'required|numeric|min:1.0'
+            'plans.*.price' => 'required|numeric|min:1.0',
+            'plans.*.currency' => 'required|in:bif,dollar'
         ]);
 
         if ($validator->fails()) {
@@ -208,7 +209,8 @@ class RoomTypeController extends BaseController
 
             'plans' => 'required_if:property_type,hotel|array',
             'plans.*.plan_type' => 'required|string|max:255',
-            'plans.*.price' => 'required|numeric|min:1.0'
+            'plans.*.price' => 'required|numeric|min:1.0',
+            'plans.*.currency' => 'required|in:bif,dollar'
         ]);
 
         if ($validator->fails()) {

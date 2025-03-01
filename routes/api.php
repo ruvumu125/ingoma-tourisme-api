@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\CityController;
+use App\Http\Controllers\API\DestinationSearchController;
 use App\Http\Controllers\API\PropertyController;
 use App\Http\Controllers\API\HotelTypeController;
 use App\Http\Controllers\API\RoomTypeController;
@@ -11,6 +12,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\File;
 
 Route::group(['prefix' => 'v1'], function () {
+
+    //destination search
+    Route::get('destination-search', [DestinationSearchController::class, 'search']);
 
     // List all cities without pagination
     Route::get('cities/list-all', [CityController::class, 'listAllCities']);
@@ -68,6 +72,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::put('/amenities/{id}', [AmenityController::class, 'updateAmenity']);
     Route::delete('/amenities/{id}', [AmenityController::class, 'deleteAmenity']);
 
+
+    Route::get('/properties-listing', [PropertyController::class, 'index']);
     Route::get('/properties', [PropertyController::class, 'listAllProperties']);
     Route::get('/properties/paginate', [PropertyController::class, 'getAllProperties']);
     Route::get('/properties/{id}', [PropertyController::class, 'getPropertyById']);
