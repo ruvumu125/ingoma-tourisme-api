@@ -73,7 +73,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::delete('/amenities/{id}', [AmenityController::class, 'deleteAmenity']);
 
 
-    Route::get('/properties-listing', [PropertyController::class, 'index']);
+    Route::get('/properties-listing', [PropertyController::class, 'listing']);
+    Route::get('/select-property/{id}', [PropertyController::class, 'selectProperty']);
     Route::get('/properties', [PropertyController::class, 'listAllProperties']);
     Route::get('/properties/paginate', [PropertyController::class, 'getAllProperties']);
     Route::get('/properties/{id}', [PropertyController::class, 'getPropertyById']);
@@ -84,7 +85,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::put('/enableProperty/{id}', [PropertyController::class, 'enableProperty']);
     Route::put('/desableProperty/{id}', [PropertyController::class, 'desableProperty']);
 
-
+    Route::get('/show-rooms/{propertyId}', [PropertyController::class, 'showRooms']);
     Route::get('room-types', [RoomTypeController::class, 'listAllRoomTypes']);
     Route::get('room-types/paginate', [RoomTypeController::class, 'getAllRoomTypes']);
     Route::post('room-types', [RoomTypeController::class, 'addRoomType']);

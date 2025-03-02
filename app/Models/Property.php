@@ -60,8 +60,9 @@ class Property extends Model
      */
     public function guestHouseType()
     {
-        return $this->hasOne(PropertyGuestHouseType::class);
+        return $this->hasOne(PropertyGuestHouseType::class, 'property_id', 'id');
     }
+
 
     /**
      * Get all guest house variants for the property.

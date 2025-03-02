@@ -20,6 +20,7 @@ class RoomPlanResource extends JsonResource
             'room_type_id' => $this->room_type_id,
             'plan_type' => $this->plan_type, // Changed field name to match the model
             'price' => $this->price,
+            'currency' => $this->currency,
             'created_at' => $this->created_at->format('d/m/Y'),
             'updated_at' => $this->updated_at->format('d/m/Y'),
         ];

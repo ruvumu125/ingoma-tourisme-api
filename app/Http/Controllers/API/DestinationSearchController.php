@@ -15,8 +15,11 @@ class DestinationSearchController extends Controller
         $results = [];
 
         if (empty($query)) {
-            // Return 10 popular cities when no query is provided
-            $cities = City::limit(10)->withCount('hotels')->get();
+            // ✅ Fetch 10 cities that have at least 1 property
+            $cities = City::whereHas('hotels') // Ensures the city has properties
+            ->withCount('hotels')
+                ->limit(10)
+                ->get();
 
             foreach ($cities as $city) {
                 $results[] = [
@@ -30,8 +33,9 @@ class DestinationSearchController extends Controller
             return response()->json($results);
         }
 
-        // Search for cities matching the query
+        // ✅ Fetch cities that match the query and have at least 1 property
         $cities = City::where('name', 'LIKE', "%{$query}%")
+            ->whereHas('hotels') // Ensures the city has properties
             ->withCount('hotels')
             ->get();
 
@@ -44,12 +48,9 @@ class DestinationSearchController extends Controller
             ];
         }
 
-        // Search for properties matching the query
+        // ✅ Fetch properties that match the query
         $properties = Property::where('name', 'LIKE', "%{$query}%")
             ->orWhere('address', 'LIKE', "%{$query}%")
-            ->orWhereHas('city', function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%");
-            })
             ->get();
 
         foreach ($properties as $property) {

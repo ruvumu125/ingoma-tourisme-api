@@ -67,24 +67,50 @@ class RoomTypeController extends BaseController
     // Add a new room with RoomTypePlan
     public function addRoomType(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        // Ensure `property_type` is treated as a string
+        $request->merge([
+            'property_type' => (string) $request->input('property_type')
+        ]);
+
+        $rules = [
             'type_name' => 'required|string|max:255',
             'property_id' => 'required|exists:properties,id',
             'room_size' => 'required|numeric|min:0.1',
             'amenities' => 'required|array',
             'amenities.*.amenity_id' => 'distinct|exists:amenities,id',
-            'images' => 'required|array',
-            'images.*.image_url' => 'file|image|mimes:jpeg,png,jpg,gif|max:1000',
-            'images.*.is_main' => 'nullable|in:true,false,1,0',
 
-            'plans' => 'required_if:property_type,hotel|array',
-            'plans.*.plan_type' => 'required|string|max:255',
-            'plans.*.price' => 'required|numeric|min:1.0',
-            'plans.*.currency' => 'required|in:bif,dollar'
-        ]);
+            'images' => 'required|array',
+            'images.*.image_url' => 'required|file|image|mimes:jpeg,png,jpg,gif|max:1000',
+            'images.*.is_main' => 'nullable|in:true,false,1,0',
+        ];
+
+        // Only validate `plans` if `property_type` is `hotel`
+        if ($request->input('property_type') === 'hotel') {
+            $rules['plans'] = 'required|array|min:1';
+            $rules['plans.*.plan_type'] = 'required|string|max:255';
+            $rules['plans.*.price'] = 'required|numeric|min:1.0';
+            $rules['plans.*.currency'] = 'required|in:bif,dollar';
+        } else {
+            // `plans` is optional for other property types
+            $rules['plans'] = 'nullable|array';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors());
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error.',
+                'errors' => $validator->errors(),
+            ], 400);
+        }
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error.',
+                'errors' => $validator->errors(),
+            ], 400);
         }
 
         $validated = $validator->validated();
@@ -111,7 +137,7 @@ class RoomTypeController extends BaseController
         }
 
         // Add plans (for hotel rooms only)
-        if ($room->property->property_type === 'hotel' && isset($validated['plans'])) {
+        if ($request->input('property_type') === 'hotel' && isset($validated['plans'])) {
             foreach ($validated['plans'] as $planData) {
                 $room->plans()->create($planData);
             }

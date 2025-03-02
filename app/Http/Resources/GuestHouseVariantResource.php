@@ -13,6 +13,7 @@ class GuestHouseVariantResource extends JsonResource
             'property_guest_house_id' => $this->property_guest_house_id,
             'variant' => $this->variant, // E.g., 'per_night', 'per_week'
             'price' => $this->price,
+            'currency' => $this->currency,
             'created_at' => $this->created_at->format('d/m/Y'),
             'updated_at' => $this->updated_at->format('d/m/Y'),
         ];

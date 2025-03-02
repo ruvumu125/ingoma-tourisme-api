@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Http\Resources\PropertyDetailsResource;
 use App\Http\Resources\PropertyEditResource;
 use App\Http\Resources\PropertyResource;
+use App\Http\Resources\RoomTypeResource;
 use App\Models\GuestHouseVariant;
 use App\Models\PropertyAmenity;
 use App\Models\PropertyGuestHouseType;
@@ -102,7 +104,9 @@ class PropertyController extends BaseController
             'guest_house_variants' => 'required_if:property_type,guesthouse|array',
             'guest_house_variants.*.variant' => 'required|string',
             'guest_house_variants.*.price' => 'required|numeric|min:1',
-            'guest_house_variants.*.currency' => 'required|in:bif,dollar'
+            'guest_house_variants.*.currency' => 'required|string|in:bif,dollar',
+
+
         ]);
 
         if ($validator->fails()) {
@@ -442,52 +446,160 @@ class PropertyController extends BaseController
         return $this->sendResponse([], 'Property deleted successfully.');
     }
 
-    public function index()
+    public function listing(Request $request)
     {
-        // Eager load the necessary relationships
-        $properties = Property::with([
-            'images', // Eager load images
-            'hotelType',
-            'roomtypes',
-            'guestHouseType',
-            'hotelType.hotelType'  // Added for the correct relationship with HotelType
-        ])->get();
+        // Get parameters from the request
+        $search = $request->query('search');
+        $propertyType = $request->query('property_type');
+        $perPage = $request->query('per_page', 10);
 
-        // Map through the properties to calculate the minimum price for each
+        // Ensure property_type is provided
+        if (!$propertyType) {
+            return response()->json([
+                'message' => 'The property_type parameter is required. Please provide a valid property type.'
+            ], 400);
+        }
+
+        // Query the properties with eager loading
+        $query = Property::with([
+            'images',
+            'hotelType.hotelType',
+            'roomtypes.plans',
+            'guestHouseType.guestHouseVariants',
+            'city'
+        ])->where('property_type', $propertyType); // Ensure property_type is always filtered
+
+        // Apply search filter if provided (searching by name or city)
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhereHas('city', function ($q) use ($search) {
+                        $q->where('name', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // Paginate results
+        $properties = $query->paginate($perPage);
+
+        // If no results found, return a message
+        if ($properties->isEmpty()) {
+            return response()->json([
+                'message' => 'No properties found matching the search criteria.'
+            ], 404);
+        }
+
+        // Process the properties
         $propertiesData = $properties->map(function ($property) {
-            // Check the property type and calculate the minimum price
             $minPrice = null;
+            $currency = null;
 
-            // Fetch the correct hotel type
-            $hotelTypeName = null;
-            if ($property->hotelType) {
-                $hotelTypeName = $property->hotelType->hotelType->type_name;
-            }
+            // Fetch hotel type if applicable
+            $hotelTypeName = $property->hotelType && $property->hotelType->hotelType
+                ? $property->hotelType->hotelType->type_name
+                : null;
 
-            if ($property->property_type == 'hotel') {
-                // For hotel, we find the minimum price from the related RoomTypePlan
+            // Process hotel properties
+            if ($property->property_type === 'hotel') {
                 foreach ($property->roomtypes as $roomType) {
-                    $minRoomPrice = $roomType->plans()->min('price');
-                    if ($minPrice === null || ($minRoomPrice < $minPrice)) {
-                        $minPrice = $minRoomPrice;
+                    foreach ($roomType->plans as $plan) {
+                        if ($minPrice === null || $plan->price < $minPrice) {
+                            $minPrice = $plan->price;
+                            $currency = $plan->currency;
+                        }
                     }
                 }
-            } elseif ($property->property_type == 'guest_house') {
-                // For guest house, we find the minimum price from the related GuestHouseVariant
-                $minPrice = $property->guestHouseType->guestHouseVariants()->min('price');
             }
 
+            // Process guesthouse properties
+            elseif ($property->property_type === 'guesthouse' && $property->guestHouseType) {
+                if ($property->guestHouseType->guestHouseVariants->isNotEmpty()) {
+                    // Sort guest house variants by price and pick the minimum
+                    $minVariant = $property->guestHouseType->guestHouseVariants->sortBy('price')->first();
+
+                    // Set the minimum price and currency
+                    $minPrice = $minVariant->price;
+                    $currency = $minVariant->currency;
+                } else {
+                    logger('No guest house variants found for property: ' . $property->name);
+                }
+            }
+
+            // Return the property data
             return [
                 'name'         => $property->name,
+                'city'         => $property->city->name ?? null,
                 'property_type'=> $property->property_type,
-                'hotel_type'   => $hotelTypeName, // Corrected here
+                'hotel_type'   => $hotelTypeName,
                 'address'      => $property->address,
                 'min_price'    => $minPrice,
-                'images'       => $property->images->pluck('image_url'), // Fixed here to 'image_url'
+                'currency'     => $currency,
+                'images'       => $property->images->pluck('image_url'),
             ];
         });
 
-        return response()->json($propertiesData);
+        // Return paginated JSON response
+        return response()->json([
+            'data' => $propertiesData,
+            'pagination' => [
+                'total'        => $properties->total(),
+                'count'        => $properties->count(),
+                'per_page'     => $properties->perPage(),
+                'current_page' => $properties->currentPage(),
+                'total_pages'  => $properties->lastPage(),
+            ],
+        ]);
     }
+
+    public function selectProperty($id)
+    {
+        // Fetch the property with related models
+        $property = Property::with([
+            'city', 'images', 'rules', 'landmarks', 'roomtypes',
+            'amenities', 'hotelType', 'guestHouseType', 'guestHouseVariants'
+        ])->findOrFail($id);
+
+        // Determine the type (Hotel or Guesthouse)
+        $isHotel = $property->hotelType !== null;
+        $isGuestHouse = $property->guestHouseType !== null;
+
+        // Fetch 5 similar properties in the same city and type
+        $similarPropertiesQuery = Property::where('city_id', $property->city_id)
+            ->where('id', '!=', $property->id);
+
+        if ($isHotel) {
+            $similarPropertiesQuery->whereHas('hotelType');
+        } elseif ($isGuestHouse) {
+            $similarPropertiesQuery->whereHas('guestHouseType');
+        }
+
+        $similarProperties = $similarPropertiesQuery->inRandomOrder()->limit(5)->get();
+
+        // Attach the similar properties to the main property
+        $property->setRelation('similarProperties', $similarProperties);
+
+        // Return the resource
+        return new PropertyDetailsResource($property);
+    }
+
+    public function showRooms($propertyId)
+    {
+        // Fetch property with room types, amenities, and images using eager loading
+        $property = Property::with(['roomtypes.amenities', 'roomtypes.images', 'roomtypes.plans'])->find($propertyId);
+
+        // Check if the property exists
+        if (!$property) {
+            return response()->json(['error' => 'Property not found'], 404);
+        }
+
+        // Return the property with its rooms, using the RoomTypeResource for formatting
+        return RoomTypeResource::collection($property->roomtypes);
+    }
+
+
+
+
+
+
 }
 
