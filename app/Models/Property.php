@@ -79,5 +79,32 @@ class Property extends Model
         );
     }
 
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function scopeFilterByAmenitiesAndPrice($query, $amenities = [], $minPrice = null, $maxPrice = null)
+    {
+        if (!empty($amenities)) {
+            $query->whereHas('amenities', function ($q) use ($amenities) {
+                $q->whereIn('amenities.id', $amenities);
+            });
+        }
+
+        if ($minPrice !== null || $maxPrice !== null) {
+            $query->whereHas('roomtypes.plans', function ($q) use ($minPrice, $maxPrice) {
+                if ($minPrice !== null) {
+                    $q->where('price', '>=', $minPrice);
+                }
+                if ($maxPrice !== null) {
+                    $q->where('price', '<=', $maxPrice);
+                }
+            });
+        }
+
+        return $query;
+    }
+
 
 }

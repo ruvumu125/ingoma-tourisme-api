@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\BookingController;
 use App\Http\Controllers\API\CityController;
 use App\Http\Controllers\API\DestinationSearchController;
 use App\Http\Controllers\API\PropertyController;
@@ -7,11 +8,30 @@ use App\Http\Controllers\API\HotelTypeController;
 use App\Http\Controllers\API\RoomTypeController;
 use App\Http\Controllers\API\AmenityCategoryController;
 use App\Http\Controllers\API\AmenityController;
+use App\Http\Controllers\API\UserController;
+use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\File;
 
 Route::group(['prefix' => 'v1'], function () {
+
+    Route::post('/login', [UserController::class, 'login']);
+    Route::post('/customerRegister', [UserController::class, 'customerRegister']);
+    Route::post('/administratorRegister', [UserController::class, 'adminRegister']);
+    Route::post('/superAdministratorRegister', [UserController::class, 'superAdminRegister']);
+    Route::put('/users/{id}', [UserController::class, 'updateUser']);
+
+
+    Route::middleware(['auth:sanctum', RoleMiddleware::class . ':customer'])->group(function () {
+
+        Route::post('/saveBooking', [BookingController::class, 'saveBooking']);
+        Route::get('/hotel-bookings/user/{userId}', [BookingController::class, 'getUserHotelBookings']);
+        Route::get('/gueshouse-bookings/user/{userId}', [BookingController::class, 'getUserGuestHouseBookings']);
+        Route::get('/booking-details/{bookingId}', [BookingController::class, 'getBookingDetails']);
+    });
+//    });
+
 
     //destination search
     Route::get('destination-search', [DestinationSearchController::class, 'search']);
@@ -62,6 +82,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::put('/amenity-categories/{id}', [AmenityCategoryController::class, 'updateAmenityCategory']);
     Route::delete('/amenity-categories/{id}', [AmenityCategoryController::class, 'deleteAmenityCategory']);
 
+    Route::get('/amenities-by-property-type-and-city', [AmenityController::class, 'getAmenitiesByTypeAndCity']);
+    Route::get('/amenities-by-property-type-and-propertyname', [AmenityController::class, 'getAmenitiesByTypeAndPropertyName']);
 
     Route::get('/amenities', [AmenityController::class, 'listAllAmenities']);
     Route::get('/property-amenities', [AmenityController::class, 'propertyAmenitiesList']);
@@ -72,7 +94,10 @@ Route::group(['prefix' => 'v1'], function () {
     Route::put('/amenities/{id}', [AmenityController::class, 'updateAmenity']);
     Route::delete('/amenities/{id}', [AmenityController::class, 'deleteAmenity']);
 
-
+    Route::get('/properties/filter', [PropertyController::class, 'filterProperties']);
+    Route::get('/guesthouse-rooms/{id}', [PropertyController::class, 'getGuestHouseDetails']);
+    Route::get('/price-range-by-property-type-and-city', [PropertyController::class, 'getPriceRangeByTypeAndCity']);
+    Route::get('/price-range-by-property-type-and-propertyname', [PropertyController::class, 'getPriceRangeByPropertyName']);
     Route::get('/properties-listing', [PropertyController::class, 'listing']);
     Route::get('/select-property/{id}', [PropertyController::class, 'selectProperty']);
     Route::get('/properties', [PropertyController::class, 'listAllProperties']);

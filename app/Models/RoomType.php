@@ -34,5 +34,10 @@ class RoomType extends Model
             ->withPivot('description')
             ->withTimestamps();
     }
+
+    public function hotelBookings()
+    {
+        return $this->hasMany(HotelBooking::class);
+    }
 }
 

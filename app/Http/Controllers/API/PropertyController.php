@@ -527,6 +527,7 @@ class PropertyController extends BaseController
 
             // Return the property data
             return [
+                'id'         => $property->id,
                 'name'         => $property->name,
                 'city'         => $property->city->name ?? null,
                 'property_type'=> $property->property_type,
@@ -596,10 +597,267 @@ class PropertyController extends BaseController
         return RoomTypeResource::collection($property->roomtypes);
     }
 
+    public function getPriceRangeByTypeAndCity(Request $request)
+    {
+        $propertyType = $request->query('property_type');
+        $cityName = $request->query('city_name'); // Accept city_name instead of city_id
+
+        // Validate the input
+        if (!$propertyType || !$cityName) {
+            return response()->json(['error' => 'property_type and city_name are required'], 400);
+        }
+
+        // Fetch the city by its name
+        $city = City::where('name', $cityName)->first();
+
+        // If the city is not found, return an error
+        if (!$city) {
+            return response()->json(['error' => 'City not found'], 404);
+        }
+
+        $minPrice = 0;
+        $maxPrice = 0;
+
+        if ($propertyType === 'hotel') {
+            // Fetch prices from RoomTypePlan for hotels
+            $prices = Property::where('property_type', $propertyType)
+                ->where('city_id', $city->id) // Use city ID fetched from the city name
+                ->whereHas('roomtypes.plans') // Ensure room plans exist
+                ->with(['roomtypes.plans'])
+                ->get()
+                ->flatMap(function ($property) {
+                    return $property->roomtypes->flatMap(function ($roomType) {
+                        return $roomType->plans->pluck('price');
+                    });
+                });
+
+            $minPrice = $prices->min() ?? 0;
+            $maxPrice = $prices->max() ?? 0;
+
+        } elseif ($propertyType === 'guesthouse') {
+            // Fetch prices from GuestHouseVariant for guesthouses
+            $prices = Property::where('property_type', $propertyType)
+                ->where('city_id', $city->id) // Use city ID fetched from the city name
+                ->whereHas('guestHouseType.guestHouseVariants') // Ensure variants exist
+                ->with(['guestHouseType.guestHouseVariants'])
+                ->get()
+                ->flatMap(function ($property) {
+                    return $property->guestHouseType ? $property->guestHouseType->guestHouseVariants->pluck('price') : [];
+                });
+
+            $minPrice = $prices->min() ?? 0;
+            $maxPrice = $prices->max() ?? 0;
+        }
+
+        return response()->json([
+            'property_type' => $propertyType,
+            'city_name' => $cityName, // Return the city name in the response
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice
+        ]);
+    }
 
 
+    public function getPriceRangeByPropertyName(Request $request)
+    {
+        $propertyType = $request->query('property_type');
+        $propertyName = $request->query('property_name');
 
+        // Validate the input
+        if (!$propertyType || !$propertyName) {
+            return response()->json(['error' => 'property_type and property_name are required'], 400);
+        }
 
+        $minPrice = 0;
+        $maxPrice = 0;
+
+        if ($propertyType === 'hotel') {
+            // Fetch prices from RoomTypePlan for hotels
+            $prices = Property::where('property_type', $propertyType)
+                ->where('name', 'LIKE', "%{$propertyName}%") // Search by property name
+                ->whereHas('roomtypes.plans') // Ensure room plans exist
+                ->with(['roomtypes.plans'])
+                ->get()
+                ->flatMap(function ($property) {
+                    return $property->roomtypes->flatMap(function ($roomType) {
+                        return $roomType->plans->pluck('price');
+                    });
+                });
+
+            $minPrice = $prices->min() ?? 0;
+            $maxPrice = $prices->max() ?? 0;
+
+        } elseif ($propertyType === 'guesthouse') {
+            // Fetch prices from GuestHouseVariant for guesthouses
+            $prices = Property::where('property_type', $propertyType)
+                ->where('name', 'LIKE', "%{$propertyName}%") // Search by property name
+                ->whereHas('guestHouseType.guestHouseVariants') // Ensure variants exist
+                ->with(['guestHouseType.guestHouseVariants'])
+                ->get()
+                ->flatMap(function ($property) {
+                    return $property->guestHouseType ? $property->guestHouseType->guestHouseVariants->pluck('price') : [];
+                });
+
+            $minPrice = $prices->min() ?? 0;
+            $maxPrice = $prices->max() ?? 0;
+        }
+
+        return response()->json([
+            'property_type' => $propertyType,
+            'property_name' => $propertyName,
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice
+        ]);
+    }
+
+    public function getGuestHouseDetails($id)
+    {
+        $property = Property::with([
+            'roomtypes.images',       // Eager load room images
+            'roomtypes.amenities',    // Eager load room amenities
+            'guestHouseVariants'      // Eager load guest house variants
+        ])
+            ->where('id', $id)
+            ->where('property_type', 'guesthouse')
+            ->first();
+
+        if (!$property) {
+            return response()->json(['message' => 'Property not found'], 404);
+        }
+
+        // Return property with room types, images, amenities, and guest house variants
+        return response()->json($property, 200);
+    }
+
+    public function filterProperties(Request $request)
+    {
+        // Get parameters from the request
+        $search = $request->query('search');
+        $propertyType = $request->query('property_type');
+        $perPage = $request->query('per_page', 10);
+        $amenities = $request->query('amenities', []); // Array of amenity IDs
+        $minPrice = $request->query('min_price');
+        $maxPrice = $request->query('max_price');
+        $sortBy = $request->query('sort_by'); // "price_low_to_high" or "price_high_to_low"
+
+        // Ensure property_type is provided
+        if (!$propertyType) {
+            return response()->json([
+                'message' => 'The property_type parameter is required. Please provide a valid property type.'
+            ], 400);
+        }
+
+        // Query the properties with eager loading
+        $query = Property::with([
+            'images',
+            'hotelType.hotelType',
+            'roomtypes.plans',
+            'guestHouseType.guestHouseVariants',
+            'city',
+            'amenities' // Load amenities
+        ])->where('property_type', $propertyType);
+
+        // Apply search filter if provided (searching by name or city)
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhereHas('city', function ($q) use ($search) {
+                        $q->where('name', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filter by selected amenities
+        if (!empty($amenities)) {
+            $query->whereHas('amenities', function ($q) use ($amenities) {
+                $q->whereIn('amenities.id', $amenities);
+            });
+        }
+
+        // Filter by price range
+        if ($minPrice !== null || $maxPrice !== null) {
+            $query->whereHas('roomtypes.plans', function ($q) use ($minPrice, $maxPrice) {
+                if ($minPrice !== null) {
+                    $q->where('price', '>=', $minPrice);
+                }
+                if ($maxPrice !== null) {
+                    $q->where('price', '<=', $maxPrice);
+                }
+            });
+        }
+
+        // Paginate results
+        $properties = $query->paginate($perPage);
+
+        // If no results found, return a message
+        if ($properties->isEmpty()) {
+            return response()->json([
+                'message' => 'No properties found matching the search criteria.'
+            ], 404);
+        }
+
+        // Process the properties and calculate min_price
+        $propertiesData = $properties->map(function ($property) {
+            $minPrice = null;
+            $currency = null;
+
+            // Fetch hotel type if applicable
+            $hotelTypeName = $property->hotelType && $property->hotelType->hotelType
+                ? $property->hotelType->hotelType->type_name
+                : null;
+
+            // Process hotel properties
+            if ($property->property_type === 'hotel') {
+                foreach ($property->roomtypes as $roomType) {
+                    foreach ($roomType->plans as $plan) {
+                        if ($minPrice === null || $plan->price < $minPrice) {
+                            $minPrice = $plan->price;
+                            $currency = $plan->currency;
+                        }
+                    }
+                }
+            }
+            // Process guesthouse properties
+            elseif ($property->property_type === 'guesthouse' && $property->guestHouseType) {
+                if ($property->guestHouseType->guestHouseVariants->isNotEmpty()) {
+                    $minVariant = $property->guestHouseType->guestHouseVariants->sortBy('price')->first();
+                    $minPrice = $minVariant->price;
+                    $currency = $minVariant->currency;
+                }
+            }
+
+            return [
+                'id'           => $property->id,
+                'name'         => $property->name,
+                'city'         => $property->city->name ?? null,
+                'property_type'=> $property->property_type,
+                'hotel_type'   => $hotelTypeName,
+                'address'      => $property->address,
+                'min_price'    => $minPrice,
+                'currency'     => $currency,
+                'images'       => $property->images->pluck('image_url'),
+            ];
+        });
+
+        // Apply sorting if needed
+        if ($sortBy === 'price_low_to_high') {
+            $propertiesData = $propertiesData->sortBy('min_price')->values();
+        } elseif ($sortBy === 'price_high_to_low') {
+            $propertiesData = $propertiesData->sortByDesc('min_price')->values();
+        }
+
+        // Return paginated JSON response
+        return response()->json([
+            'data' => $propertiesData,
+            'pagination' => [
+                'total'        => $properties->total(),
+                'count'        => $properties->count(),
+                'per_page'     => $properties->perPage(),
+                'current_page' => $properties->currentPage(),
+                'total_pages'  => $properties->lastPage(),
+            ],
+        ]);
+    }
 
 }
 

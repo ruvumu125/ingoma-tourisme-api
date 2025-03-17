@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Resources\AmenityResource;
 use App\Models\Amenity;
 use App\Models\AmenityCategory;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -143,6 +144,60 @@ class AmenityController extends BaseController
         $amenity->delete();
 
         return $this->sendResponse([], 'Amenity deleted successfully.');
+    }
+
+    public function getAmenitiesByTypeAndCity(Request $request)
+    {
+        // Validate request parameters
+        $request->validate([
+            'property_type' => 'required|in:hotel,guesthouse',
+            'city_name' => 'required|string', // Accept 'city_name' instead of 'city_id'
+        ]);
+
+        $propertyType = $request->property_type;
+        $cityName = $request->city_name; // Accept the city name from the request
+
+        // Fetch the city by name
+        $city = City::where('name', $cityName)->first();
+
+        // Check if the city exists
+        if (!$city) {
+            return response()->json(['message' => 'City not found'], 404);
+        }
+
+        // Fetch amenities filtered by property type and city
+        $amenities = Amenity::whereHas('properties', function ($query) use ($propertyType, $city) {
+            $query->where('properties.property_type', '=', $propertyType) // Ensure exact match for property type
+            ->where('properties.city_id', '=', $city->id); // Use the city ID fetched from the city name
+        })
+            ->distinct()
+            ->get(['amenities.id', 'amenities.name']); // Fetch distinct amenities
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $amenities
+        ]);
+    }
+
+    public function getAmenitiesByTypeAndPropertyName(Request $request){
+        $request->validate([
+            'property_type' => 'required|in:hotel,guesthouse',
+            'property_name' => 'required|string'
+        ]);
+
+        $propertyType = $request->property_type;
+        $propertyName = $request->property_name;
+
+        // Fetch amenities by property type and property name
+        $amenities = Amenity::whereHas('properties', function ($query) use ($propertyType, $propertyName) {
+            $query->where('property_type', $propertyType)
+                ->where('name', 'like', "%{$propertyName}%");
+        })->distinct()->get(['id', 'name']);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $amenities
+        ]);
     }
 }
 
