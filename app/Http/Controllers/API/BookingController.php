@@ -66,17 +66,17 @@ class BookingController extends BaseController
                 'status'         => 'pending',
             ]);
 
+            GuestDetail::create([
+                'booking_id'   => $booking->id,
+                'first_name'   => $request->first_name,
+                'last_name'    => $request->last_name,
+                'phone' => $request->phone,
+                'email' => $request->email,
+            ]);
+
 
             // Store Hotel Booking or Guest House Booking
             if ($request->booking_type === 'hotel') {
-
-                GuestDetail::create([
-                    'booking_id'   => $booking->id,
-                    'first_name'   => $request->first_name,
-                    'last_name'    => $request->last_name,
-                    'phone' => $request->phone,
-                    'email' => $request->email,
-                ]);
 
                 HotelBooking::create([
                     'booking_id' => $booking->id,
