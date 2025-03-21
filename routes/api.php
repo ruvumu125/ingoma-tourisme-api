@@ -33,6 +33,24 @@ Route::group(['prefix' => 'v1'], function () {
 //    });
 
 
+    //bookings
+    Route::get('/bookings', [BookingController::class, 'getAllBookings']);
+    Route::get('/bookings/pending', [BookingController::class, 'getPendingBookings']);
+    Route::get('/bookings/confirmed', [BookingController::class, 'getConfirmedBookings']);
+    Route::get('/bookings/cancelled', [BookingController::class, 'getCancelledBookings']);
+    Route::get('/bookings/paid', [BookingController::class, 'getPaidBookings']);
+    Route::get('/details-booking/{id}', [BookingController::class, 'getDetailsBooking']);
+    Route::put('/bookings/confirm/{id}', [BookingController::class, 'confirmBooking']);
+    Route::put('/bookings/cancel/{id}', [BookingController::class, 'cancelBooking']);
+
+
+
+
+
+
+
+
+
     //destination search
     Route::get('destination-search', [DestinationSearchController::class, 'search']);
 

@@ -14,6 +14,308 @@ use Illuminate\Support\Str;
 
 class BookingController extends BaseController
 {
+    public function getAllBookings(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default 10 per page
+        $search = $request->query('search');
+
+        $query = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type'
+        ]);
+
+        if ($search) {
+            $query->where('booking_number', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('property', function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%{$search}%");
+                });
+        }
+
+        // Order by latest booking date
+        $query->orderBy('booking_date', 'desc');
+
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'bookings' => $bookings->items(),
+            'pagination' => [
+                'total' => $bookings->total(),
+                'count' => $bookings->count(),
+                'per_page' => $bookings->perPage(),
+                'current_page' => $bookings->currentPage(),
+                'total_pages' => $bookings->lastPage(),
+            ],
+        ], 200);
+    }
+
+    public function getPendingBookings(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 per page
+        $search = $request->query('search');
+
+        $query = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type'
+        ])->where('status', 'pending');
+
+        if ($search) {
+            $query->where('booking_number', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('property', function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%{$search}%");
+                });
+        }
+
+        // Order by latest booking date
+        $query->orderBy('booking_date', 'desc');
+
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'bookings' => $bookings->items(),
+            'pagination' => [
+                'total' => $bookings->total(),
+                'count' => $bookings->count(),
+                'per_page' => $bookings->perPage(),
+                'current_page' => $bookings->currentPage(),
+                'total_pages' => $bookings->lastPage(),
+            ],
+        ], 200);
+    }
+
+    public function getConfirmedBookings(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 per page
+        $search = $request->query('search');
+
+        $query = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type'
+        ])->where('status', 'confirmed');
+
+        if ($search) {
+            $query->where('booking_number', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('property', function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%{$search}%");
+                });
+        }
+
+        // Order by latest booking date
+        $query->orderBy('booking_date', 'desc');
+
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'bookings' => $bookings->items(),
+            'pagination' => [
+                'total' => $bookings->total(),
+                'count' => $bookings->count(),
+                'per_page' => $bookings->perPage(),
+                'current_page' => $bookings->currentPage(),
+                'total_pages' => $bookings->lastPage(),
+            ],
+        ], 200);
+    }
+
+    public function getCancelledBookings(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 per page
+        $search = $request->query('search');
+
+        $query = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type'
+        ])->where('status', 'cancelled');
+
+        if ($search) {
+            $query->where('booking_number', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('property', function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%{$search}%");
+                });
+        }
+
+        // Order by latest booking date
+        $query->orderBy('booking_date', 'desc');
+
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'bookings' => $bookings->items(),
+            'pagination' => [
+                'total' => $bookings->total(),
+                'count' => $bookings->count(),
+                'per_page' => $bookings->perPage(),
+                'current_page' => $bookings->currentPage(),
+                'total_pages' => $bookings->lastPage(),
+            ],
+        ], 200);
+    }
+
+    public function getPaidBookings(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 per page
+        $search = $request->query('search');
+
+        $query = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type'
+        ])->where('status', 'paid');
+
+        if ($search) {
+            $query->where('booking_number', 'LIKE', "%{$search}%")
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('property', function ($query) use ($search) {
+                    $query->where('name', 'LIKE', "%{$search}%");
+                });
+        }
+
+        // Order by latest booking date
+        $query->orderBy('booking_date', 'desc');
+
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'bookings' => $bookings->items(),
+            'pagination' => [
+                'total' => $bookings->total(),
+                'count' => $bookings->count(),
+                'per_page' => $bookings->perPage(),
+                'current_page' => $bookings->currentPage(),
+                'total_pages' => $bookings->lastPage(),
+            ],
+        ], 200);
+    }
+
+    public function getDetailsBooking($id)
+    {
+        $booking = Booking::with([
+            'user:id,first_name,last_name,email,phone_number',
+            'property:id,name,address,property_type',
+            'property.images:id,property_id,image_url,is_main', // Fetch property images
+            'guestDetail:id,booking_id,first_name,last_name,phone,email', // Guest details
+            'hotelBooking' => function ($query) {
+                $query->with([
+                    'room:id,type_name,room_size,bed_type,max_guests,description', // Room details
+                    'room.amenities:id,name', // Fetch amenities
+                ]);
+            }
+        ])->find($id);
+
+        if (!$booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        // Check if booking type is hotel and return room details
+        if ($booking->booking_type == 'hotel' && $booking->hotelBooking) {
+            $roomDetails = $booking->hotelBooking->room; // Room details from HotelBooking
+
+            // Fetch the main image URL for the room (where is_main is true)
+            $mainImage = $roomDetails->images->firstWhere('is_main', true);
+
+            // Assign the main image URL to the response if it exists
+            $roomDetails->image_url = $mainImage ? $mainImage->image_url : null; // Set image_url field
+
+            // Fetch amenities with their description from the pivot table
+            $roomDetails->amenities = $roomDetails->amenities->map(function ($amenity) {
+                return [
+                    'name' => $amenity->name,
+                    'description' => $amenity->pivot->description, // Fetch description from pivot
+                ];
+            });
+
+            // Remove the 'images' array from the room details
+            unset($roomDetails->images);
+
+            $booking->room = $roomDetails; // Rename to 'room' in response
+            unset($booking->hotelBooking); // Remove the hotelBooking relationship
+        }
+
+        // Fetch the main image URL for the property (where is_main is true)
+        $mainPropertyImage = $booking->property->images->firstWhere('is_main', true);
+
+        // Assign the main image URL to the property if it exists
+        $booking->property->image_url = $mainPropertyImage ? $mainPropertyImage->image_url : null; // Set image_url field
+        unset($booking->property->images); // Remove the images array from the property
+
+        return response()->json([
+            'booking' => $booking
+        ], 200);
+    }
+
+    public function confirmBooking($id)
+    {
+        // Find the booking
+        $booking = Booking::find($id);
+
+        if (!$booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        // Check if the booking is already confirmed
+        if ($booking->status === 'confirmed') {
+            return response()->json(['message' => 'Booking is already confirmed.'], 400);
+        }
+
+        // Update the booking status to confirmed
+        $booking->status = 'confirmed';
+        $booking->save();
+
+        return response()->json([
+            'message' => 'Booking confirmed successfully.',
+            'booking' => $booking
+        ], 200);
+    }
+
+    public function cancelBooking($id)
+    {
+        // Find the booking
+        $booking = Booking::find($id);
+
+        if (!$booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        // Check if the booking is already cancelled
+        if ($booking->status === 'cancelled') {
+            return response()->json(['message' => 'Booking is already cancelled.'], 400);
+        }
+
+        // Update the booking status to cancelled
+        $booking->status = 'cancelled';
+        $booking->save();
+
+        return response()->json([
+            'message' => 'Booking cancelled successfully.',
+            'booking' => $booking
+        ], 200);
+    }
+
+
+
+
     public function saveBooking(Request $request)
     {
         $validator  = Validator::make($request->all(), [
