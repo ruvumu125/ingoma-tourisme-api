@@ -220,6 +220,7 @@ class BookingController extends BaseController
                 $query->with([
                     'room:id,type_name,room_size,bed_type,max_guests,description',
                     'room.amenities:id,name', // Fetch amenities
+                    'roomPlan:id,room_type_id,plan_type,price,currency' // Fetch Room Plan
                 ]);
             }
         ])->find($id);
@@ -228,7 +229,6 @@ class BookingController extends BaseController
             return response()->json(['message' => 'Booking not found.'], 404);
         }
 
-        // Initialize adults and children as null
         $adults = null;
         $children = null;
 
@@ -236,11 +236,10 @@ class BookingController extends BaseController
         if ($booking->booking_type == 'hotel' && $booking->hotelBooking) {
             $hotelBooking = $booking->hotelBooking; // HotelBooking model instance
             $roomDetails = $hotelBooking->room;
+            $roomPlan = $hotelBooking->roomPlan;
 
             // Fetch the main image URL for the room (where is_main is true)
             $mainImage = $roomDetails->images->firstWhere('is_main', true);
-
-            // Assign the main image URL to the response if it exists
             $roomDetails->image_url = $mainImage ? $mainImage->image_url : null; // Set image_url field
 
             // Fetch amenities with their description from the pivot table
@@ -254,7 +253,7 @@ class BookingController extends BaseController
             // Remove the 'images' array from the room details
             unset($roomDetails->images);
 
-            // Assign room details
+            // Assign room details with room plan
             $booking->room = [
                 'id' => $roomDetails->id,
                 'type_name' => $roomDetails->type_name,
@@ -263,7 +262,13 @@ class BookingController extends BaseController
                 'max_guests' => $roomDetails->max_guests,
                 'description' => $roomDetails->description,
                 'image_url' => $roomDetails->image_url,
-                'amenities' => $roomDetails->amenities
+                'amenities' => $roomDetails->amenities,
+                'room_plan' => $roomPlan ? [
+                    'id' => $roomPlan->id,
+                    'plan_type' => $roomPlan->plan_type,
+                    'price' => $roomPlan->price,
+                    'currency' => $roomPlan->currency
+                ] : null
             ];
 
             // Set adults and children under status
@@ -275,9 +280,7 @@ class BookingController extends BaseController
 
         // Fetch the main image URL for the property (where is_main is true)
         $mainPropertyImage = $booking->property->images->firstWhere('is_main', true);
-
-        // Assign the main image URL to the property if it exists
-        $booking->property->image_url = $mainPropertyImage ? $mainPropertyImage->image_url : null; // Set image_url field
+        $booking->property->image_url = $mainPropertyImage ? $mainPropertyImage->image_url : null;
         unset($booking->property->images); // Remove the images array from the property
 
         return response()->json([
@@ -303,6 +306,7 @@ class BookingController extends BaseController
             ]
         ], 200);
     }
+
 
 
 
