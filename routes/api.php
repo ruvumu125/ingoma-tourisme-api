@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\AdvertisementController;
 use App\Http\Controllers\API\BookingController;
 use App\Http\Controllers\API\CityController;
 use App\Http\Controllers\API\DestinationSearchController;
@@ -21,6 +22,13 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/administratorRegister', [UserController::class, 'adminRegister']);
     Route::post('/superAdministratorRegister', [UserController::class, 'superAdminRegister']);
     Route::put('/users/{id}', [UserController::class, 'updateUser']);
+    Route::put('/enableUser/{id}', [UserController::class, 'enableUser']);
+    Route::put('/desableUser/{id}', [UserController::class, 'desableUser']);
+    Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
+
+    Route::get('/super-admin-pagination-search', [UserController::class, 'getAllSuperAdminsPaginationSearch']);
+    Route::get('/admin-pagination-search', [UserController::class, 'getAllAdminsPaginationSearch']);
+    Route::get('/customer-pagination-search', [UserController::class, 'getAllCustomersPaginationSearch']);
 
 
     Route::middleware(['auth:sanctum', RoleMiddleware::class . ':customer'])->group(function () {
@@ -39,10 +47,19 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/bookings/confirmed', [BookingController::class, 'getConfirmedBookings']);
     Route::get('/bookings/cancelled', [BookingController::class, 'getCancelledBookings']);
     Route::get('/bookings/paid', [BookingController::class, 'getPaidBookings']);
-    Route::get('/details-booking/{id}', [BookingController::class, 'getDetailsBooking']);
+    Route::get('/booking/details/{id}', [BookingController::class, 'getDetailsBooking']);
     Route::put('/bookings/confirm/{id}', [BookingController::class, 'confirmBooking']);
     Route::put('/bookings/cancel/{id}', [BookingController::class, 'cancelBooking']);
 
+    Route::get('/advertisements', [AdvertisementController::class, 'getAllAdvertisements']);
+    Route::get('/advertisement/{id}', [AdvertisementController::class, 'getAdvertisementById']);
+    Route::post('/advertisement', [AdvertisementController::class, 'addAdvertisement']);
+    Route::post('/advertisements/{id}', [AdvertisementController::class, 'updateAdvertisement']);
+
+    Route::put('/enableAdvertisement/{id}', [AdvertisementController::class, 'enableAdvertisement']);
+    Route::put('/desableAdvertisement/{id}', [AdvertisementController::class, 'desableAdvertisement']);
+    Route::delete('/advertisements/{id}', [AdvertisementController::class, 'deleteAdvertisement']);
+    Route::get('/advertisements/active', [AdvertisementController::class, 'getActiveAdvertisement']);
 
 
 
@@ -161,6 +178,26 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/room-image/{filename}', function ($filename) {
         // Path to the image in the resources/uploads/property_images directory
         $path = resource_path('uploads/room_images/' . $filename);
+
+        // Check if the file exists
+        if (!File::exists($path)) {
+            abort(404, "Image not found.");
+        }
+
+        // Get the file's content
+        $file = File::get($path);
+
+        // Get the MIME type of the file
+        $mimeType = File::mimeType($path);
+
+        // Return the file with the appropriate content type
+        return response($file, 200)->header("Content-Type", $mimeType);
+    });
+
+    //Récupérer une photo de la publicite
+    Route::get('/advertisement-image/{filename}', function ($filename) {
+        // Path to the image in the resources/uploads/property_images directory
+        $path = resource_path('uploads/advertisement_images/' . $filename);
 
         // Check if the file exists
         if (!File::exists($path)) {

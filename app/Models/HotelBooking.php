@@ -9,7 +9,7 @@ class HotelBooking extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['booking_id', 'room_id', 'adults', 'children'];
+    protected $fillable = ['booking_id', 'room_id','room_plan_id', 'adults', 'children'];
 
     public function booking()
     {
@@ -19,5 +19,9 @@ class HotelBooking extends Model
     public function room()
     {
         return $this->belongsTo(RoomType::class);
+    }
+    public function roomPlan()
+    {
+        return $this->belongsTo(RoomTypePlan::class);
     }
 }

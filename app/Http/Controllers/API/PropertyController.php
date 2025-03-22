@@ -105,6 +105,7 @@ class PropertyController extends BaseController
             'guest_house_variants.*.variant' => 'required|string',
             'guest_house_variants.*.price' => 'required|numeric|min:1',
             'guest_house_variants.*.currency' => 'required|string|in:bif,dollar',
+            'guest_house_variants.*.tarification_type' => 'required|string|in:monthly,daily',
 
 
         ]);
@@ -184,6 +185,8 @@ class PropertyController extends BaseController
                         'property_guest_house_id' => $guestHouseType->id,
                         'variant' => $variant['variant'],
                         'price' => $variant['price'],
+                        'currency' => $variant['currency'],
+                        'tarification_type' => $variant['tarification_type']
                     ]);
                 }
             }
@@ -289,7 +292,8 @@ class PropertyController extends BaseController
             'guest_house_variants' => 'required_if:property_type,guesthouse|array',
             'guest_house_variants.*.variant' => 'required|string',
             'guest_house_variants.*.price' => 'required|numeric|min:1',
-            'guest_house_variants.*.currency' => 'required|in:bif,dollar'
+            'guest_house_variants.*.currency' => 'required|in:bif,dollar',
+            'guest_house_variants.*.tarification_type' => 'required|string|in:monthly,daily',
         ]);
 
         if ($validator->fails()) {
@@ -360,6 +364,8 @@ class PropertyController extends BaseController
                         'property_guest_house_id' => $guestHouseType->id,
                         'variant' => $variant['variant'],
                         'price' => $variant['price'],
+                        'currency' => $variant['currency'],
+                        'tarification_type' => $variant['tarification_type']
                     ]);
                 }
             }

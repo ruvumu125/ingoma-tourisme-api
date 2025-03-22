@@ -60,7 +60,7 @@ class BookingController extends BaseController
 
         $query = Booking::with([
             'user:id,first_name,last_name,email,phone_number',
-            'property:id,name,address,property_type'
+            'property:id,name,address,property_type,whatsapp_number1,whatsapp_number2'
         ])->where('status', 'pending');
 
         if ($search) {
@@ -218,7 +218,7 @@ class BookingController extends BaseController
             'guestDetail:id,booking_id,first_name,last_name,phone,email', // Guest details
             'hotelBooking' => function ($query) {
                 $query->with([
-                    'room:id,type_name,room_size,bed_type,max_guests,description', // Room details
+                    'room:id,type_name,room_size,bed_type,max_guests,description',
                     'room.amenities:id,name', // Fetch amenities
                 ]);
             }
@@ -228,9 +228,14 @@ class BookingController extends BaseController
             return response()->json(['message' => 'Booking not found.'], 404);
         }
 
+        // Initialize adults and children as null
+        $adults = null;
+        $children = null;
+
         // Check if booking type is hotel and return room details
         if ($booking->booking_type == 'hotel' && $booking->hotelBooking) {
-            $roomDetails = $booking->hotelBooking->room; // Room details from HotelBooking
+            $hotelBooking = $booking->hotelBooking; // HotelBooking model instance
+            $roomDetails = $hotelBooking->room;
 
             // Fetch the main image URL for the room (where is_main is true)
             $mainImage = $roomDetails->images->firstWhere('is_main', true);
@@ -249,7 +254,22 @@ class BookingController extends BaseController
             // Remove the 'images' array from the room details
             unset($roomDetails->images);
 
-            $booking->room = $roomDetails; // Rename to 'room' in response
+            // Assign room details
+            $booking->room = [
+                'id' => $roomDetails->id,
+                'type_name' => $roomDetails->type_name,
+                'room_size' => $roomDetails->room_size,
+                'bed_type' => $roomDetails->bed_type,
+                'max_guests' => $roomDetails->max_guests,
+                'description' => $roomDetails->description,
+                'image_url' => $roomDetails->image_url,
+                'amenities' => $roomDetails->amenities
+            ];
+
+            // Set adults and children under status
+            $adults = $hotelBooking->adults;
+            $children = $hotelBooking->children;
+
             unset($booking->hotelBooking); // Remove the hotelBooking relationship
         }
 
@@ -261,9 +281,30 @@ class BookingController extends BaseController
         unset($booking->property->images); // Remove the images array from the property
 
         return response()->json([
-            'booking' => $booking
+            'booking' => [
+                'booking_id' => $booking->id,
+                'booking_number' => $booking->booking_number,
+                'booking_date' => $booking->created_at->format('Y-m-d H:i:s'),
+                'check_in_date' => $booking->check_in_date,
+                'check_out_date' => $booking->check_out_date,
+                'duration' => $booking->duration,
+                'unit_price' => $booking->unit_price,
+                'total_price' => $booking->total_price,
+                'currency' => $booking->currency,
+                'pricing_type' => $booking->pricing_type,
+                'booking_type' => $booking->booking_type,
+                'status' => $booking->status,
+                'adults' => $adults,
+                'children' => $children,
+                'user' => $booking->user,
+                'property' => $booking->property,
+                'guestDetail' => $booking->guestDetail,
+                'room' => $booking->room ?? null
+            ]
         ], 200);
     }
+
+
 
     public function confirmBooking($id)
     {
@@ -338,6 +379,7 @@ class BookingController extends BaseController
             'adults'        => 'required_if:booking_type,hotel|numeric|min:1',
             'children'      => 'required_if:booking_type,hotel|numeric|min:0',
             'room_id'       => 'required_if:booking_type,hotel|exists:room_types,id',
+            'room_plan_id'  => 'required_if:booking_type,hotel|exists:room_types,id',
         ]);
 
         if ($validator->fails()) {

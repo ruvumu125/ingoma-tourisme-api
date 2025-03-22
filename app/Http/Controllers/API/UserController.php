@@ -14,6 +14,117 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends BaseController
 {
+    public function getAllSuperAdminsPaginationSearch(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 items per page
+        $search = $request->query('search'); // Get the search query parameter
+
+        // Build the query
+        $query = User::where('role', 'superadmin'); // Fetch only users with role 'Agent'
+
+        // Apply search filter if the search parameter is provided
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone_number', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Get paginated results
+        $agents = $query->paginate($perPage);
+
+        // Return response
+        return $this->sendResponse(
+            [
+                'superadmins' => UserResource::collection($agents),
+                'pagination' => [
+                    'total' => $agents->total(),
+                    'count' => $agents->count(),
+                    'per_page' => $agents->perPage(),
+                    'current_page' => $agents->currentPage(),
+                    'total_pages' => $agents->lastPage(),
+                ],
+            ],
+            'Super admins retrieved successfully.'
+        );
+    }
+
+    public function getAllAdminsPaginationSearch(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 items per page
+        $search = $request->query('search'); // Get the search query parameter
+
+        // Build the query
+        $query = User::where('role', 'admin'); // Fetch only users with role 'Agent'
+
+        // Apply search filter if the search parameter is provided
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone_number', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Get paginated results
+        $agents = $query->paginate($perPage);
+
+        // Return response
+        return $this->sendResponse(
+            [
+                'admins' => UserResource::collection($agents),
+                'pagination' => [
+                    'total' => $agents->total(),
+                    'count' => $agents->count(),
+                    'per_page' => $agents->perPage(),
+                    'current_page' => $agents->currentPage(),
+                    'total_pages' => $agents->lastPage(),
+                ],
+            ],
+            'Super admins retrieved successfully.'
+        );
+    }
+
+    public function getAllCustomersPaginationSearch(Request $request)
+    {
+        $perPage = $request->query('per_page', 10); // Default to 10 items per page
+        $search = $request->query('search'); // Get the search query parameter
+
+        // Build the query
+        $query = User::where('role', 'customer'); // Fetch only users with role 'Agent'
+
+        // Apply search filter if the search parameter is provided
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone_number', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Get paginated results
+        $agents = $query->paginate($perPage);
+
+        // Return response
+        return $this->sendResponse(
+            [
+                'customers' => UserResource::collection($agents),
+                'pagination' => [
+                    'total' => $agents->total(),
+                    'count' => $agents->count(),
+                    'per_page' => $agents->perPage(),
+                    'current_page' => $agents->currentPage(),
+                    'total_pages' => $agents->lastPage(),
+                ],
+            ],
+            'Super admins retrieved successfully.'
+        );
+    }
+
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -204,5 +315,50 @@ class UserController extends BaseController
         $user->save();
 
         return $this->sendResponse(new UserResource($user), 'User updated successfully.');
+    }
+
+    public function enableUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (is_null($user)) {
+            return $this->sendError('User not found.');
+        }
+
+        $user->status =$request->status;
+        $user->save();
+
+        return $this->sendResponse(new UserResource($user), 'User enabled successfully.');
+    }
+
+    public function desableUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (is_null($user)) {
+            return $this->sendError('User not found.');
+        }
+
+        $user->status ="Inactive";
+        $user->save();
+
+        return $this->sendResponse(new UserResource($user), 'User desabled successfully.');
+    }
+
+    // Delete a user
+    public function deleteUser($id)
+    {
+        $user = User::find($id);
+
+        if (is_null($user)) {
+            return $this->sendError('User not found.');
+        }
+
+        if ($user && $user->bookings()->exists()) {
+
+            return $this->sendError('Delete Error.','Impossible de supprimer l\'utilisateur sélectionné');
+        }
+
+        $user->delete();
+
+        return $this->sendResponse([], 'User deleted successfully.');
     }
 }
