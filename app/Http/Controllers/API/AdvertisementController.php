@@ -101,17 +101,10 @@ class AdvertisementController extends BaseController
     public function getActiveAdvertisement()
     {
         // Fetch the first active video
-        $activeVideo = Advertisement::where('is_active', true)->first();
+        $activeVideos = Advertisement::where('is_active', true)->get();;
 
-        // Check if an active video exists
-        if ($activeVideo) {
+        return $this->sendResponse(AdvertisementResource::collection($activeVideos), 'Videos retrieved successfully.');
 
-            return $this->sendResponse(new AdvertisementResource($activeVideo), 'Video retrieved successfully.');
-
-        } else {
-
-            return $this->sendError('Video not found.');
-        }
     }
 
 

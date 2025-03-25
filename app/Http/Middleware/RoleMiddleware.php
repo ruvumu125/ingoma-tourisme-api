@@ -10,10 +10,10 @@ use Symfony\Component\HttpFoundation\Response;
 class RoleMiddleware
 {
 
-    public function handle(Request $request, Closure $next, string $role)
+    public function handle(Request $request, Closure $next, string ...$roles) // Accept multiple roles
     {
-        // Check if the authenticated user has the required role
-        if (!auth()->check() || !auth()->user()->hasRole($role)) {
+        // Check if the authenticated user has at least one of the required roles
+        if (!auth()->check() || !collect($roles)->contains(auth()->user()->role)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

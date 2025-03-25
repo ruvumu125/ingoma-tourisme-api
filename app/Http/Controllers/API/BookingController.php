@@ -220,7 +220,7 @@ class BookingController extends BaseController
                 $query->with([
                     'room:id,type_name,room_size,bed_type,max_guests,description',
                     'room.amenities:id,name', // Fetch amenities
-                    'roomPlan:id,room_type_id,plan_type,price,currency' // Fetch Room Plan
+                    'roomPlan:id,room_type_id,plan_type,price,currency,description' // Fetch Room Plan
                 ]);
             }
         ])->find($id);
@@ -267,7 +267,8 @@ class BookingController extends BaseController
                     'id' => $roomPlan->id,
                     'plan_type' => $roomPlan->plan_type,
                     'price' => $roomPlan->price,
-                    'currency' => $roomPlan->currency
+                    'currency' => $roomPlan->currency,
+                    'description'=> $roomPlan->description
                 ] : null
             ];
 
@@ -383,7 +384,7 @@ class BookingController extends BaseController
             'adults'        => 'required_if:booking_type,hotel|numeric|min:1',
             'children'      => 'required_if:booking_type,hotel|numeric|min:0',
             'room_id'       => 'required_if:booking_type,hotel|exists:room_types,id',
-            'room_plan_id'  => 'required_if:booking_type,hotel|exists:room_types,id',
+            'room_plan_id'  => 'required_if:booking_type,hotel',
         ]);
 
         if ($validator->fails()) {
@@ -431,6 +432,7 @@ class BookingController extends BaseController
                     'adults'     => $request->adults,
                     'children'   => $request->children,
                     'room_id'    => $request->room_id,
+                    'room_plan_id'    => $request->room_plan_id,
                 ]);
             } else {
                 GuestHouseBooking::create([

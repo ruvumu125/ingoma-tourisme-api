@@ -10,10 +10,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('hotel_bookings', function (Blueprint $table) {
-            $table->foreignId('room_plan_id')
-                ->nullable()
-                ->constrained('room_type_plans')
-                ->onDelete('cascade');
+            if (!Schema::hasColumn('hotel_bookings', 'room_plan_id')) {
+                $table->foreignId('room_plan_id')
+                    ->constrained('room_type_plans')
+                    ->onDelete('cascade');
+            }
         });
     }
 

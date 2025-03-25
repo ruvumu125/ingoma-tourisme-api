@@ -90,6 +90,7 @@ class RoomTypeController extends BaseController
             $rules['plans.*.plan_type'] = 'required|string|max:255';
             $rules['plans.*.price'] = 'required|numeric|min:1.0';
             $rules['plans.*.currency'] = 'required|in:bif,dollar';
+            $rules['plans.*.description'] = 'nullable|string|max:1000';
         } else {
             // `plans` is optional for other property types
             $rules['plans'] = 'nullable|array';
@@ -139,7 +140,13 @@ class RoomTypeController extends BaseController
         // Add plans (for hotel rooms only)
         if ($request->input('property_type') === 'hotel' && isset($validated['plans'])) {
             foreach ($validated['plans'] as $planData) {
-                $room->plans()->create($planData);
+
+                $room->plans()->create([
+                    'plan_type' => $planData['plan_type'],
+                    'price' => $planData['price'],
+                    'currency' => $planData['currency'],
+                    'description' => $planData['description'] ?? null, // Handle optional description
+                ]);
             }
         }
 
@@ -229,14 +236,15 @@ class RoomTypeController extends BaseController
             'room_size' => 'required|numeric|min:0.1',
             'amenities' => 'required|array',
             'amenities.*.amenity_id' => 'distinct|exists:amenities,id',
-            'images' => 'required|array',
-            'images.*.image_url' => 'file|image|mimes:jpeg,png,jpg,gif|max:1000',
+            'images' => 'sometimes|array',
+            'images.*.image_url' => 'required|file|image|mimes:jpeg,png,jpg,gif|max:1000',
             'images.*.is_main' => 'nullable|in:true,false,1,0',
 
             'plans' => 'required_if:property_type,hotel|array',
             'plans.*.plan_type' => 'required|string|max:255',
             'plans.*.price' => 'required|numeric|min:1.0',
-            'plans.*.currency' => 'required|in:bif,dollar'
+            'plans.*.currency' => 'required|in:bif,dollar',
+            'plans.*.description' => 'nullable|string|max:1000'
         ]);
 
         if ($validator->fails()) {
